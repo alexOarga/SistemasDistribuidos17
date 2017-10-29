@@ -1,0 +1,1 @@
+En esta práctica vamos a implementar un chat distribuido. Una aplicación de chat distribuido permite a un grupo de usuarios enviarse mensajes de texto entre sí: lo que uno escribe, aparece inmediatamente en las pantallas de todos los participantes. Sin embargo, será requisito indispensable que todos los mensajes de texto se muestren en el mismo orden a todos los usuarios.
