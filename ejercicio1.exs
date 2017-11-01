@@ -1,4 +1,6 @@
 defmodule Chat do
+
+  # Proceso que contiene las variables compratidas
   def shared_database(ourSequenceNumber, highestSequenceNumber, requestingCriticalSection, replyDeferred, counter, waiting, defer_it) do
 	IO.puts("shared")	
 	receive do
@@ -39,6 +41,7 @@ defmodule Chat do
 	end
   end
 
+  # Envia request a todos los nodos excepto a si mismo
   def send_request([{dest, dir} | tail], me, id, ourSequenceNumber, meDir) do
 	if String.to_atom(dest) != me do
 	  IO.puts("enviadno request a " <> dest <> "+++" <> dir)
@@ -49,6 +52,7 @@ defmodule Chat do
 	end
   end
 
+  # Espera reply de todos los nodos excepto de si mismo
   def wait_for_reply([{dest, dir} | tail], me) do
 	if String.to_atom(dest) != me do   
 	  IO.puts("esperando reply de " <> dir)
@@ -61,6 +65,7 @@ defmodule Chat do
 	end
   end
 
+  # Envia reply a todos los nodos en deferred
   def send_reply_deferred([deferred | tail], [{dest, dir} | tailDest], pid, pos) do
 	if deferred do
 	  send(pid, {:set, :replyDeferred, false, pos})
@@ -71,6 +76,7 @@ defmodule Chat do
 	end
   end
 	
+  # Envia el mensaje al chat de todos los nodos
   def send_chat_msg([{dest, dir} | tailDest], me, msg) do
 	send( {:"receive_chat", String.to_atom(dir)}, {:msg, me, msg} )
 	if List.last(tailDest) != nil do
@@ -78,8 +84,7 @@ defmodule Chat do
 	end
   end
 
-  def mutual_exclusion(pid, nodes, me, id, meDir) do
-	msg = IO.gets" Escribe mensaje:"
+  def pre_protocol(pid, nodes, me, id, meDir) do
 	send(pid, {self(), :shared_vars})
 	receive do
 	  {ourSequenceNumber, highestSequenceNumber, requestingCriticalSection, replyDeferred, defer_it} ->
@@ -87,15 +92,27 @@ defmodule Chat do
 	  send_request(nodes, me, id, highestSequenceNumber + 1, meDir)
 	end
 	wait_for_reply(nodes, me)
-	IO.puts("----------SC")
-	send_chat_msg(nodes, me, msg)
+  end
+
+  def post_protocol(pid, nodes, me, id, meDir) do
+	send(pid, {:set, :requestingCriticalSection, false})
 	send(pid, {self(), :get, :replyDeferred})
 	receive do
 	  {:replyDeferred, replyDeferred} -> send_reply_deferred(replyDeferred, nodes, pid, 0)
 	end
+  end
+
+  # Mutual exclusion process
+  def mutual_exclusion(pid, nodes, me, id, meDir) do
+	msg = IO.gets" Escribe mensaje:"
+	pre_protocol(pid, nodes, me, id, meDir)
+	IO.puts("----------SC")
+	send_chat_msg(nodes, me, msg)
+	post_protocol(pid, nodes, me, id, meDir)
 	mutual_exclusion(pid, nodes, me, id, meDir)
   end
 
+  # Receive request process
   def receives_request(pid, me) do
 	IO.puts("recibiendo reqest....")
 	receive do
