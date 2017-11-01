@@ -2,20 +2,17 @@ defmodule Chat do
 
   # Proceso que contiene las variables compratidas
   def shared_database(ourSequenceNumber, highestSequenceNumber, requestingCriticalSection, replyDeferred, counter, waiting, defer_it) do
-	IO.puts("shared")	
 	receive do
 	  {pid, :shared_vars} -> if counter == 0 do
-						   IO.puts("wauting")
+						   IO.puts("Wait blocked")
 						   waiting = waiting ++ [pid]
 	  					 else
-						   IO.puts("if eslse")
 						   send(pid, {ourSequenceNumber, highestSequenceNumber, requestingCriticalSection, replyDeferred, defer_it})
 	  					   counter = counter - 1
 	  					 end
 						 shared_database(ourSequenceNumber, highestSequenceNumber, requestingCriticalSection, replyDeferred, counter, waiting, defer_it)
 	  {:shared_vars_ME, ourSequenceNumber_2, requestingCriticalSection_2} -> counter = counter + 1
 						if List.last(waiting) != nil do
-						  IO.puts("desspiera")
 						  send(List.first(waiting), {ourSequenceNumber_2, highestSequenceNumber, requestingCriticalSection_2, replyDeferred, defer_it} )
 						  waiting = List.delete(waiting, 0)
 						  shared_database(ourSequenceNumber_2, highestSequenceNumber, requestingCriticalSection_2, replyDeferred, counter, waiting, defer_it)
@@ -25,7 +22,6 @@ defmodule Chat do
 						end
 	 {:shared_vars_RR, defer_it_2} -> counter = counter + 1
 						if List.last(waiting) != nil do
-						  IO.puts("desspiera")
 						  send(List.first(waiting), {ourSequenceNumber, highestSequenceNumber, requestingCriticalSection, replyDeferred, defer_it_2} )
 						  waiting = List.delete(waiting, 0)
 						  shared_database(ourSequenceNumber, highestSequenceNumber, requestingCriticalSection, replyDeferred, counter, waiting, defer_it_2)
@@ -44,7 +40,7 @@ defmodule Chat do
   # Envia request a todos los nodos excepto a si mismo
   def send_request([{dest, dir} | tail], me, id, ourSequenceNumber, meDir) do
 	if String.to_atom(dest) != me do
-	  IO.puts("enviadno request a " <> dest <> "+++" <> dir)
+	  IO.puts("Enviadno request a " <> dest <> "+++" <> dir)
 	  send({:"receive_request", String.to_atom(dir)}, {:request, ourSequenceNumber ,id,me, meDir})
     end
 	if List.last(tail) != nil do
@@ -55,9 +51,9 @@ defmodule Chat do
   # Espera reply de todos los nodos excepto de si mismo
   def wait_for_reply([{dest, dir} | tail], me) do
 	if String.to_atom(dest) != me do   
-	  IO.puts("esperando reply de " <> dir)
+	  IO.puts(" Esperando reply de " <> dir)
 	  receive do
-		{:reply} -> IO.puts("reply")
+		{:reply} -> IO.puts(" Recibido reply")
 	  end
     end
 	if List.last(tail) != nil do
@@ -69,7 +65,7 @@ defmodule Chat do
   def send_reply_deferred([deferred | tail], [{dest, dir} | tailDest], pid, pos) do
 	if deferred do
 	  send(pid, {:set, :replyDeferred, false, pos})
-	  send({dest,String.to_atom(dir)}, {:reply})
+	  send({String.to_atom(dest),String.to_atom(dir)}, {:reply})
 	end
 	if List.last(tail) != nil do
 	  send_reply_deferred(tail, tailDest, pid, pos+1)
@@ -114,22 +110,19 @@ defmodule Chat do
 
   # Receive request process
   def receives_request(pid, me) do
-	IO.puts("recibiendo reqest....")
 	receive do
-	  {:request, k, j, origin, originDir} -> IO.puts("enviado reply a " <> originDir)
-	  
+	  {:request, k, j, origin, originDir} -> 
 	  send(pid, {:set, :highestSequenceNumber, k})
 	  send(pid, {self(), :shared_vars})
-	  IO.puts("debug")
 	  receive do
-		{ourSequenceNumber, highestSequenceNumber, requestingCriticalSection, replyDeferred, defer_it} -> IO.puts("V(SHARED)")
+		{ourSequenceNumber, highestSequenceNumber, requestingCriticalSection, replyDeferred, defer_it} -> nada = true
 		deferIt = requestingCriticalSection and ((k > ourSequenceNumber) or (k==ourSequenceNumber and j>me))
 		send(pid, {:shared_vars_RR, deferIt })
 		if deferIt do
-		  IO.puts("añade defered")
+		  IO.puts("Añade defered a " <> originDir)
 		  send(pid,  {:set, :replyDeferred, true, j})
 		else
-		  IO.puts("enviamos reply a "  <> originDir)
+		  IO.puts("Enviamos reply a "  <> originDir)
 		  send({origin,String.to_atom(originDir)}, {:reply})
 		end
 	  end
