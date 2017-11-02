@@ -8,6 +8,9 @@
 #                                  usuarios definidos (3). Lo que
 #                                  uno escribe aparece inmediatamente
 #                                  en las pantallas de los demas.
+#EJECUCIÓN: El nombre de los nodos debe ser nodo0, nodo1, nodo2.
+#			En el nodo x ejecutar la funcion init con los parametros:
+#				init(x, "nodox@direccion")
 
 defmodule Chat do
 
