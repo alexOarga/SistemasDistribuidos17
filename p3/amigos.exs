@@ -1,14 +1,14 @@
-defmodule Prueba do
+defmodule Amigos do
 	#Devuelve la lista de todos los divisores de n, empezando con d=n-1  
-	defp divisores(n, d) do
+	def divisores(n, d) do
 		if(d > 0) do
 		  if(rem(n, d) == 0) do
-		    lista = [d] ++ divisores(n, d-1)
+		    [d] ++ divisores(n, d-1)
 		  else
-		    lista = divisores(n, d-1)
+		    divisores(n, d-1)
 		  end
 		else
-			lista = []
+			[]
 		end
   end
 
