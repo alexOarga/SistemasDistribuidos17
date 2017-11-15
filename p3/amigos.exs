@@ -1,7 +1,6 @@
 defmodule Amigos do
 	#Devuelve la lista de todos los divisores de n, empezando con d=n-1  
 	def divisores(n, d) do
-		IO.puts("PERO ESTO QUE ES")
 		if(d > 0) do
 		  if(rem(n, d) == 0) do
 		    lista = [d] ++ divisores(n, d-1)
