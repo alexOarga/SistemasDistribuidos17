@@ -1,14 +1,15 @@
 defmodule Amigos do
 	#Devuelve la lista de todos los divisores de n, empezando con d=n-1  
 	def divisores(n, d) do
+		IO.puts("PERO ESTO QUE ES")
 		if(d > 0) do
 		  if(rem(n, d) == 0) do
-		    [d] ++ divisores(n, d-1)
+		    lista = [d] ++ divisores(n, d-1)
 		  else
-		    divisores(n, d-1)
+		    lista = divisores(n, d-1)
 		  end
 		else
-			[]
+	    lista = []
 		end
   end
 
@@ -24,6 +25,11 @@ defmodule Amigos do
 	def sonAmigos(a, b) do	
 		(sum_list(divisores(a,a-1)) == b) && (sum_list(divisores(b,b-1)) == a)
   end
+
+	#Devuelve la suma de los divisores propios de n
+	def sum_div(n) do
+		sum_list(divisores(n,n-1))
+	end
 
 
 
