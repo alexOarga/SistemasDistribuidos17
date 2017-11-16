@@ -2,20 +2,20 @@ defmodule Worker do
 
   Code.require_file("amigos.exs")
 
-  def init do
+  def init do 
     case :random.uniform(100) do
       #random when random > 80 -> :crash
       #random when random > 50 -> :omission
       #random when random > 25 -> :timing
       _ -> :no_fault
     end
+  end  
+
+  def loop do
+    loopI(init())
   end
 
-  def loop(tipo) do
-    loopI(init(), tipo)
-  end
-
-  defp loopI(worker_type, tipo) do
+  defp loopI(worker_type) do
     delay = case worker_type do
       :crash -> if :random.uniform(100) > 75, do: :infinity
       :timing -> :random.uniform(100)*1000
@@ -25,21 +25,24 @@ defmodule Worker do
     result = receive do
      {:req, { reg, dir, id_op, natural, list}} ->
 			IO.puts("recibido")
-            if (((worker_type == :omission) and (:random.uniform(100) < 75)) or (worker_type == :timing) or (worker_type==:no_fault)) do
+            if (((worker_type == :omission) and (:random.uniform(100) < 75)) or (worker_type == :timing) or (worker_type==:no_fault)) do 
 			  IO.puts(op(id_op, natural, list))
-			  IO.puts(id_op)
-			  send( {reg, dir} , {:res, op(tipo, natural, list)} )
+			  send( {reg, dir} , {:res, op(id_op, natural, list)} )
 			end
     end
-    loopI(worker_type, tipo)
+    loopI(worker_type)
   end
 
-  def op(m, n, list) do
-		case {m,n,list} do
-			{1, n, list} -> Amigos.divisores(n,n-1)
-			{2, n, list} -> Amigos.sum_div(n)
-			{3, n, list} -> Amigos.sum_list(list)
-		end
+  defp op(m, n, list) do
+	if m == 0 do
+	  Amigos.divisores(n, 1)
 	end
+	if m == 1 do
+	  Amigos.sum_list( Amigos.divisores(n, 1) )
+	end
+	if m == 2 do
+	  Amigos.sum_list( list )
+	end
+  end
 
 end
