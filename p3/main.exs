@@ -79,6 +79,8 @@ defmodule Fail do
 
   def enviar_eleccion( {id, my_reg, my_dir}, [{id_dest, reg_dest, dir_dest}|tail] ) do
 	if id_dest > id do
+	  IO.puts("envio eleccion")
+	  IO.puts(dir_dest)
 	  send( {reg_dest, dir_dest},  {:eleccion, my_reg, my_dir} )
 	end
 	if List.last(tail) != nil do
@@ -98,7 +100,8 @@ defmodule Fail do
   def recibir_eleccion( {id, my_reg, my_dir}, [{id_dest, reg_dest, dir_dest}|tail] , grupo) do
 	if id_dest > id do
 	  receive do
-		{:ok, id_rec, dir_rec} -> bucle_recepcion( {id, my_reg, my_dir}, grupo, {id_rec, dir_rec})
+		{:"ok",pid_rec, dir_rec} -> IO.puts("recibe ok????") 
+			bucle_recepcion( {id, my_reg, my_dir}, grupo, {pid_rec, dir_rec})
 	  after
 		200 -> IO.puts("LIDER") 
 		enviar_soy_lider({id, my_reg, my_dir}, grupo)
@@ -112,20 +115,24 @@ defmodule Fail do
   def bucle_recepcion( {id, my_reg, my_dir}, grupo, lider) do
 	IO.puts("-------- recive")
 	receive do
-	  {:eleccion, pid_origen, dir_origen} -> 
-		send({my_reg, my_dir}, {:ok, my_reg, my_dir})
+	  {:eleccion, pid_origen, dir_origen} -> IO.puts("envio ------> ok")
+		send({pid_origen, dir_origen}, {:"ok", my_reg, my_dir})
 		bucle_recepcion( {id, my_reg, my_dir}, grupo, {my_reg, my_dir})
 	  {:soy_lider, pid_origen, dir_origen} ->
 		IO.puts("NUEVO  LIDER")
-		send({pid_origen, dir_origen}, {:puslo, my_reg, my_dir})
+		IO.puts(pid_origen)
+		IO.puts(dir_origen)
+		send({pid_origen, dir_origen}, {:pulso, my_reg, my_dir})
+		IO.puts("NUEVO LIDER -- FIN")
 		bucle_recepcion( {id, my_reg, my_dir}, grupo, {my_reg, my_dir})
 	  {:pulso, pid_origen, dir_origen} ->
 		IO.puts("PULSO")
-		send({pid_origen, dir_origen}, {:res_puslo, my_reg, my_dir})
+		send({pid_origen, dir_origen}, {:res_pulso, my_reg, my_dir})
 		bucle_recepcion( {id, my_reg, my_dir}, grupo, {my_reg, my_dir})
 	  {:res_pulso, pid_origen, dir_origen} ->
 		IO.puts("RES PULSO")
-		send({pid_origen, dir_origen}, {:puslo, my_reg, my_dir})
+		:timer.sleep(5000)
+		send({pid_origen, dir_origen}, {:pulso, my_reg, my_dir})
 		bucle_recepcion( {id, my_reg, my_dir}, grupo, {my_reg, my_dir})
 	after
 	  10000 -> IO.puts("ELECCION")
@@ -149,7 +156,7 @@ defmodule Fail do
 
   def workerInit(id, myReg ,myDir, tipo, dirTipo) do
 	grupo1 = [{1, :"worker_rec", :"worker1@127.0.0.1"},{2, :"worker_rec", :"worker2@127.0.0.1"},{3, :"worker_rec", :"worker3@127.0.0.1"}]
-	pid = spawn(Fail, :bucle_recepcion_init, [{id, myReg, myDir}, grupo1, {id, myReg ,myDir}])
+	pid = spawn(Fail, :bucle_recepcion_init, [{id, :"worker_rec", myDir}, grupo1, {id, myReg ,myDir}])
     Process.register(self(), String.to_atom("worker" <> Integer.to_string(id)))
     Worker.loop(tipo)
   end
