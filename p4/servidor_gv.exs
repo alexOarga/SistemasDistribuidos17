@@ -44,7 +44,7 @@ defmodule ServidorGV do
     @spec startNodo(String.t, String.t) :: node
     def startNodo(nombre, maquina) do
                                          # fichero en curso
-        NodoRemoto.start(nombre, maquina, __ENV__.file)
+        NodoRemoto.start(nombre, maquina, __ENV__.file) ##Ruta fichero servidor_gv.exs
     end
 
     @doc """
@@ -66,11 +66,10 @@ defmodule ServidorGV do
 
         spawn(__MODULE__, :init_monitor, [self()]) # otro proceso concurrente
 
-        #### VUESTRO CODIGO DE INICIALIZACION
         t_vista = %ServidorGV{num_vista: 0, primario: :undefined, copia: :undefined}
         v_vista = %ServidorGV{num_vista: 0, primario: :undefined, copia: :undefined}
 
-        bucle_recepcion(t_vista, v_vista, []) ###??????????????????????????????????????????????????
+        bucle_recepcion(t_vista, v_vista, [])
     end
 
     def init_monitor(pid_principal) do
@@ -86,7 +85,7 @@ defmodule ServidorGV do
                     if (t_vista.num_vista == 0) do ##Caso inicial, ningun nodo, nueva vista
                       t_vista = %{t_vista | num_vista: t_vista.num_vista + 1}##Suma numero vista + 1
                       t_vista = %{t_vista | primario: nodo_emisor} ##Nodo primario en vista
-                      listaLatidos = listaLatidos ++ [{nodo_emisor,0}]         ##Se añade a la nueva
+                      listaLatidos = listaLatidos ++ [{nodo_emisor,0}] ##Se añade a la lista
                       send({:cliente_gv, nodo_emisor}, {:vista_tentativa, t_vista, (t_vista == v_vista)})
                       {t_vista,v_vista,listaLatidos} ##Return
                     else ##t_vista.num_vista != 0
@@ -94,14 +93,14 @@ defmodule ServidorGV do
                         listaLatidos = listaLatidos ++ [{nodo_emisor,0}]
                         t_vista = %{t_vista | copia: nodo_emisor} ##Nodo copia en vista
                         t_vista = %{t_vista | num_vista: t_vista.num_vista + 1}##Suma numero vista + 1
-                      else
+                      else ##Hay primario y copia, entra en espera
                         listaLatidos = listaLatidos ++ [{nodo_emisor, 0}] ##Se añade como espera
                       end
                       send({:cliente_gv, nodo_emisor}, {:vista_tentativa, t_vista, t_vista == v_vista})
                       {t_vista,v_vista,listaLatidos} ##Return
                     end
 
-                {:latido, -1, nodo_emisor} -> ##Situacion especial, primera bucle_recepcion
+                {:latido, -1, nodo_emisor} -> ##Situacion especial, primera contestacion
                     listaLatidos = Enum.map(listaLatidos, fn({pid, x}) -> if(pid == nodo_emisor) do
                                                                             {pid,0}
                                                                           else {pid, x}
@@ -141,18 +140,19 @@ defmodule ServidorGV do
                       if(caidoPrim == true && (t_vista==v_vista)) do ##El primario se ha caido
                         t_vista = %{t_vista | primario: v_vista.copia} ##Promociona copia a primario
                         t_vista = %{t_vista | num_vista: v_vista.num_vista + 1} ##Se aumenta
-                        if(length(listaLatidos) >= 3) do ##Al menos hay uno en espera
+                        if(length(listaLatidos) >= 3) do ##Si Al menos hay uno en espera
                           t_vista = %{t_vista | copia: elem(Enum.at(listaLatidos,2),0)} ##Promociona espera a copia
                           t_vista = %{t_vista | num_vista: v_vista.num_vista + 1} ##Se aumenta
                           listaLatidos = List.delete_at(listaLatidos,0) ##Se elimina el anterior primario
-                        else ##No hay ninguno en espera, solo habra primario y copia
-                          t_vista = %{t_vista | copia: :undefined} ##Promociona nuevo nodo a copia
+                        else ##No hay ninguno en espera, solo habra primario
+                          t_vista = %{t_vista | copia: :undefined} ##Sin copia
                           listaLatidos = List.delete_at(listaLatidos,0) ##Se elimina el anterior primario
                         end
                       end
                       if(caidoCopi == true) do ##La copia se ha caido
                         if(length(listaLatidos) < 3) do ##No hay en espera, solo quedara el primario
-                          IO.puts("FALLO CRITICO, SOLO VA A HABER NODO PRIMARIO!!!!!")
+                          IO.puts("ATENCION: ERROR (SOLO HAY NODO PRIMARIO SIN REPLICA)")
+                          t_vista = %{t_vista | copia: :undefined} ##Sin copia
                           ##System.halt()
                         else
                           t_vista = %{t_vista | copia: elem(Enum.at(listaLatidos,2),0)} ##Promociona espera a copia
@@ -162,9 +162,9 @@ defmodule ServidorGV do
                       if(caidoCopi == true && caidoPrim==true) do ##ERROR CRITICO
                         IO.puts("ATENCION: ERROR CRITICO (SIN PRIMARIO Y SIN COPIA)")
                       end
-                      ##COMPROBAR LOS DE ESPERA
-                      if(length(listaLatidos) > 2) do ##Al menos hay uno en espera
-                          listaLatidos = Enum.drop_while(listaLatidos, fn({nodo,x}) ->
+                      ##COMPROBAR LOS NODOS DE ESPERA
+                      if(length(listaLatidos) > 2) do ##Si Al menos hay uno en espera
+                          listaLatidos = Enum.drop_while(listaLatidos, fn({nodo,x}) -> ##Elimina los nodos caidos
                                               if(nodo != t_vista.primario && nodo != t_vista.copia) do ##Solo queremos los espera
                                                 x >= latidos_fallidos() ##Devuelve true si tiene mas latidos fallidos
                                               else
@@ -174,7 +174,7 @@ defmodule ServidorGV do
                     end
                     {t_vista,v_vista,listaLatidos}
         end ##RECEIVE
-        bucle_recepcion(t_vista, v_vista, listaLatidos)###??????????????????????????????????????????????????
+        bucle_recepcion(t_vista, v_vista, listaLatidos)
     end
 
     # OTRAS FUNCIONES PRIVADAS VUESTRAS
