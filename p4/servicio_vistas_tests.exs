@@ -120,7 +120,6 @@ defmodule  GestorVistasTest do
         # validamos nueva vista por estar DE NUEVO completa
         # vista valida debería ser 5
         ClienteGV.latido(c1, vista.num_vista + 1)
-
         comprobar_valida(c1, c1, c3, vista.num_vista + 1)
 
         IO.puts(" ... Superado")
@@ -129,6 +128,19 @@ defmodule  GestorVistasTest do
     ## Test 7 : Primario rearrancado (C2) tratado como caido y
     #           es convertido en nodo en espera.
     #       rearrancado_caido(C1, C3),
+    ##@tag :deshabilitado
+    test "Primario rearrancado (C2) tratado como caido, convertido en nodo en espera", %{c1: c1, c2: c2, c3: c3} do
+      IO.puts("Test: Primario rearrancado tratado como caido y convertido en nodo en espera ...")
+
+      ClienteGV.latido(c2, 0) ##Servidor rearrancado
+      {vista, _} = ClienteGV.latido(c1, 5)   # vista tentativa
+      rearrancado_caido(c1,c3, 5)
+
+      ClienteGV.latido(c1, vista.num_vista)
+      ##Si c2 no entrara como nodo en espera, el numero de vista aumentaria en una unidad
+      comprobar_valida(c1, c1, c3, vista.num_vista)
+
+    end
 
     ## Test 8 : Servidor de vistas espera a que primario confirme vista
     ##          pero este no lo hace.
@@ -238,6 +250,16 @@ defmodule  GestorVistasTest do
             Process.sleep(ServidorGV.intervalo_latidos())
             espera_pasa_a_copia(c1, c3, num_vista_valida, x - 1)
         end
+    end
+
+    defp rearrancado_caido(c1, c3, num_vista_valida) do
+      {vista, _} = ClienteGV.latido(c1, num_vista_valida)
+
+      if(vista.primario == c1 && vista.copia == c3) do
+        nil
+      else
+        :fin
+      end
     end
 
     defp comprobar_tentativa(nodo_cliente, nodo_primario, nodo_copia, n_vista) do
