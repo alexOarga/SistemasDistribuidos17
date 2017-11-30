@@ -5,7 +5,7 @@ defmodule NodoRemoto do
 
     # Constantes
     @timeout_rpc 50
-    
+
     @doc """
         Poner en marcha un nodo VM remoto con ssh
          - Se tiene en consideracion los puertos disponibles,
@@ -20,7 +20,7 @@ defmodule NodoRemoto do
                     "--detached --no-halt #{fichero_programa_cargar}"])
 
         # Devolver el atomo que referencia al nodo Elixir a poner en marcha
-        String.to_atom(nombre <> "@" <> host) 
+        String.to_atom(nombre <> "@" <> host)
     end
 
     @doc """
@@ -31,10 +31,10 @@ defmodule NodoRemoto do
         # :rpc.block_call(nodo, :init, :stop, [])   estilo kill -15
         :rpc.call(nodo, :erlang, :halt, []) # estilo kill -9, ahora nos va
 
-        # tambien habría que eliminar epmd, 
+        # tambien habría que eliminar epmd,
         # en el script shell externo
     end
-    
+
     @doc """
         Eliminar los demonios epmd de una lista de máquinas
     """
