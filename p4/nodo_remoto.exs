@@ -19,7 +19,7 @@ defmodule NodoRemoto do
                     "--erl  \'-kernel inet_dist_listen_max 32049\'",
                     "--detached --no-halt #{fichero_programa_cargar}"])
 
-        # Devolver el atomo que referencia al nodo Elixir a poner en marcha
+        # Devolver el a tomo que referencia al nodo Elixir a poner en marcha
         String.to_atom(nombre <> "@" <> host)
     end
 

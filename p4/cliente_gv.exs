@@ -48,7 +48,7 @@ defmodule ClienteGV do
     end
 
     @doc """
-        Solicitar al cliente que envie una petición de obtención de vista válida
+        Solicitar al  cliente que envie una petición de obtención de vista válida
     """
     @spec obten_vista(atom) :: {ServidorGV.t_vista, boolean}
     def obten_vista(nodo_cliente) do

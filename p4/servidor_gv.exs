@@ -152,11 +152,15 @@ defmodule ServidorGV do
                       end
                       if(caidoCopi == true) do ##La copia se ha caido
                         if(length(listaLatidos) < 3) do ##No hay en espera, solo quedara el primario
-                          IO.puts("FALLO CRITICO, SOLO NODO PRIMARIO!")
-                          System.halt()
+                          IO.puts("FALLO CRITICO, SOLO VA A HABER NODO PRIMARIO!!!!!")
+                          ##System.halt()
+                        else
+                          t_vista = %{t_vista | copia: elem(Enum.at(listaLatidos,2),0)} ##Promociona espera a copia
+                          listaLatidos = List.delete_at(listaLatidos, 1) ##Se elimina de la lista la copia anterior
                         end
-                        t_vista = %{t_vista | copia: elem(Enum.at(listaLatidos,2),0)} ##Promociona espera a copia
-                        listaLatidos = List.delete_at(listaLatidos, 1) ##Se elimina de la lista la copia anterior
+                      end
+                      if(caidoCopi == true && caidoPrim==true) do ##ERROR CRITICO
+                        IO.puts("ATENCION: ERROR CRITICO (SIN PRIMARIO Y SIN COPIA)")
                       end
                       ##COMPROBAR LOS DE ESPERA
                       if(length(listaLatidos) > 2) do ##Al menos hay uno en espera
