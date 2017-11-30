@@ -139,6 +139,7 @@ defmodule  GestorVistasTest do
       ClienteGV.latido(c1, vista.num_vista)
       ##Si c2 no entrara como nodo en espera, el numero de vista aumentaria en una unidad
       comprobar_valida(c1, c1, c3, vista.num_vista)
+      IO.puts(" ... Superado")
 
     end
 
@@ -148,6 +149,21 @@ defmodule  GestorVistasTest do
     ##          - C3 no confirma vista en que es primario,
     ##          - Cae, pero C1 no es promocionado porque C3 no confimo !
     # primario_no_confirma_vista(C1, C2, C3),
+    @tag :deshabilitado
+    test "Primario no confirma", %{c1: c1, c2: c2, c3: c3} do
+      #maquinas = ["127.0.0.1"]
+      #stopServidores([sv,c1,c2,c3],maquinas)
+      #startServidores(maquinas)
+
+      ClienteGV.latido(c3, 0) ##Primario
+      ClienteGV.latido(c1, 0) ##Copia
+      ClienteGV.latido(c2, 0) ##Espera
+      primario_no_confirma_vista(c3,c1,c2, 2, ServidorGV.latidos_fallidos() * 3) ##El primario no va a confirmar
+
+      comprobar_nopromocion(c3,c1,c2,2) ##Se comprueba que, tras la caida que ha habido del primario, no ha habido ninguna promocionado
+                                        ## C1 sigue como primario, C1 sigue como copia
+      IO.puts(" ... Superado")
+    end
 
     ## Test 9 : Si anteriores servidores caen (Primario  y Copia),
     ##       un nuevo servidor sin inicializar no puede convertirse en primario.
@@ -262,6 +278,14 @@ defmodule  GestorVistasTest do
       end
     end
 
+    defp primario_no_confirma_vista(_c3,_c1,_c2, _num_vista_valida, 0), do: :fin
+    defp primario_no_confirma_vista(c3,c1,c2, num_vista_valida, x) do
+      {vista, _} = ClienteGV.latido(c1, num_vista_valida) ##La copia confirma pero no el primario
+      ClienteGV.latido(c2, num_vista_valida) ##La espera confirma pero no el primario
+      Process.sleep(ServidorGV.intervalo_latidos())
+      primario_no_confirma_vista(c3,c1,c2,vista.num_vista,x-1)
+    end
+
     defp comprobar_tentativa(nodo_cliente, nodo_primario, nodo_copia, n_vista) do
         # Solo interesa vista tentativa
         {vista, _} = ClienteGV.latido(nodo_cliente, -1)
@@ -285,6 +309,16 @@ defmodule  GestorVistasTest do
         assert vista.copia == nodo_copia
 
         assert vista.num_vista == n_vista
+    end
+
+    defp comprobar_nopromocion(nodo_primarioCaido,nodo_copia,nodo_enEspera,num_vista) do
+      {vista, _} = ClienteGV.obten_vista(nodo_copia)
+
+      assert vista.primario != nodo_copia ##Comprobar que nodo copia no ha sido promocionado a primario
+
+      assert vista.copia != nodo_enEspera ##Comprobar que nodo espera no ha sido promocionado a copia
+
+      assert vista.primario == nodo_primarioCaido ##No ha cambiado nada, deberia de seguir
     end
 
 

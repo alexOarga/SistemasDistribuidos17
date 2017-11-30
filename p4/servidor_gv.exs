@@ -138,7 +138,7 @@ defmodule ServidorGV do
                       listaLatidos = Enum.map(listaLatidos, fn({x,xs}) -> {x, xs+1} end)
                       caidoPrim = comprobarPrimario(listaLatidos) ##Se comprueba si el caido es el primario
                       caidoCopi = comprobarCopia(listaLatidos)    ##Se comprueba si el caido es la copia
-                      if(caidoPrim == true) do ##El primario se ha caido
+                      if(caidoPrim == true && (t_vista==v_vista)) do ##El primario se ha caido
                         t_vista = %{t_vista | primario: v_vista.copia} ##Promociona copia a primario
                         t_vista = %{t_vista | num_vista: v_vista.num_vista + 1} ##Se aumenta
                         if(length(listaLatidos) >= 3) do ##Al menos hay uno en espera
