@@ -29,7 +29,7 @@ defmodule ClienteGV do
     def obten_vista(nodo_servidor_gv) do
        send({:servidor_gv, nodo_servidor_gv}, {:obten_vista, self()})
 
-        receive do   # esperar respuesta del ping
+        receive do   # esperar respuesta del ping0
             {:vista_valida, vista, is_ok?} -> {vista, is_ok?}
 
         after @tiempo_espera_de_respuesta  ->
