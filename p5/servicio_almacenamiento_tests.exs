@@ -23,21 +23,23 @@ defmodule  ServicioAlmacenamientoTest do
 
 
     #setup_all do
-    
 
-    @tag :deshabilitado
+
+    #@tag :deshabilitado
     test "Test 1: solo_arranque y parada" do
         IO.puts("Test: Solo arranque y parada ...")
-        
-        
+
+
         # Poner en marcha nodos, clientes, servidores alm., en @maquinas
         mapNodos = startServidores(["ca1"], ["sa1"], @maquinas)
 
+
         Process.sleep(300)
+
 
         # Parar todos los nodos y epmds
         stopServidores(mapNodos, @maquinas)
-       
+
         IO.puts(" ... Superado")
     end
 
@@ -59,7 +61,7 @@ defmodule  ServicioAlmacenamientoTest do
         IO.puts("Test: Comprobar escritura con primario, copia y espera ...")
 
         # Comprobar primeros nodos primario y copia
-        {%{primario: p, copia: c}, _ok} = ClienteGV.obten_vista(mapa_nodos.gv)       
+        {%{primario: p, copia: c}, _ok} = ClienteGV.obten_vista(mapa_nodos.gv)
         assert p == mapa_nodos.sa1
         assert c == mapa_nodos.sa2
 
@@ -72,7 +74,7 @@ defmodule  ServicioAlmacenamientoTest do
         comprobar(mapa_nodos.ca1, "c", "cc")
 
         IO.puts(" ... Superado")
-       
+
         IO.puts("Test: Comprobar escritura despues de fallo de nodo copia ...")
 
         # Provocar fallo de nodo copia y seguido realizar una escritura
@@ -85,7 +87,7 @@ defmodule  ServicioAlmacenamientoTest do
         comprobar(mapa_nodos.ca1, "a", "aaa")
 
         # Comprobar los nuevo nodos primario y copia
-        {%{primario: p, copia: c}, _ok} = ClienteGV.obten_vista(mapa_nodos.gv)       
+        {%{primario: p, copia: c}, _ok} = ClienteGV.obten_vista(mapa_nodos.gv)
         assert p == mapa_nodos.sa1
         assert c == mapa_nodos.sa3
 
@@ -95,7 +97,7 @@ defmodule  ServicioAlmacenamientoTest do
         stopServidores(mapa_nodos, @maquinas)
     end
 
-    #@tag :deshabilitado
+    @tag :deshabilitado
     test "Test 3 : Mismos valores concurrentes" do
         IO.puts("Test: Escrituras mismos valores clientes concurrentes ...")
 
@@ -106,12 +108,12 @@ defmodule  ServicioAlmacenamientoTest do
         mapa_nodos = startServidores(["ca1", "ca2", "ca3"],
                                      ["sa1", "sa2", "sa3"],
                                      @maquinas)
-        
+
         # Espera configuracion y relacion entre nodos
         Process.sleep(200)
 
         # Comprobar primeros nodos primario y copia
-        {%{primario: p, copia: c}, _ok} = ClienteGV.obten_vista(mapa_nodos.gv)       
+        {%{primario: p, copia: c}, _ok} = ClienteGV.obten_vista(mapa_nodos.gv)
         assert p == mapa_nodos.sa1
         assert c == mapa_nodos.sa2
 
@@ -152,33 +154,33 @@ defmodule  ServicioAlmacenamientoTest do
     #         tras caída de primario y copia.
     #         Se puede gestionar con cuatro nodos o con el primario rearrancado.
 
-  
+
     # Test 5 : Petición de escritura inmediatamente después de la caída de nodo
     #         copia (con uno en espera que le reemplace).
-    
-    
+
+
     # Test 6 : Petición de escritura duplicada por perdida de respuesta
     #         (modificación realizada en BD), con primario y copia.
-    
-    
+
+
     # Test 7 : Comprobación de que un antiguo primario no debería servir
     #         operaciones de lectura.
-    
-    
+
+
     # Test 8 : Escrituras concurrentes de varios clientes sobre la misma clave,
     #         con comunicación con fallos (sobre todo pérdida de repuestas para
     #         comprobar gestión correcta de duplicados).
-    
-    
+
+
     # Test 9 : Comprobación de que un antiguo primario que se encuentra en otra
     #         partición de red no debería completar operaciones de lectura.
-    
-    
+
+
     # ------------------ FUNCIONES DE APOYO A TESTS ------------------------
 
     defp startServidores(clientes, serv_alm, maquinas) do
         tiempo_antes = :os.system_time(:milli_seconds)
-        
+
         # Poner en marcha gestor de vistas y clientes almacenamiento
         sv = ServidorGV.startNodo("sv", "127.0.0.1")
             # Mapa con nodos cliente de almacenamiento
@@ -188,30 +190,30 @@ defmodule  ServicioAlmacenamientoTest do
                         end
         ServidorGV.startService(sv)
         for { _, n} <- clientesAlm, do: ClienteSA.startService(n, sv)
-        
-        # Mapa con nodos servidores almacenamiento                 
-        servAlm = for {s, m} <-  Enum.zip(serv_alm, maquinas), into: %{} do     
+
+        # Mapa con nodos servidores almacenamiento
+        servAlm = for {s, m} <-  Enum.zip(serv_alm, maquinas), into: %{} do
                       {String.to_atom(s),
                        ServidorSA.startNodo(s, m)}
                   end
-                  
+
         # Poner en marcha servicios de cada nodo servidor de almacenamiento
         for { _, n} <- servAlm do
             ServidorSA.startService(n, sv)
             #Process.sleep(60)
         end
-    
+
         #Tiempo de puesta en marcha de nodos
         t_total = :os.system_time(:milli_seconds) - tiempo_antes
         IO.puts("Tiempo puesta en marcha de nodos  : #{t_total}")
-        
-        %{gv: sv} |> Map.merge(clientesAlm) |> Map.merge(servAlm)   
+
+        %{gv: sv} |> Map.merge(clientesAlm) |> Map.merge(servAlm)
     end
-    
+
     defp stopServidores(nodos, maquinas) do
         IO.puts "Finalmente eliminamos nodos"
-        
-        # Primero el gestor de vistas para no tener errores por fallo de 
+
+        # Primero el gestor de vistas para no tener errores por fallo de
         # servidores de almacenamiento
         { %{ gv: nodoGV}, restoNodos } = Map.split(nodos, [:gv])
         IO.inspect nodoGV, label: "nodo GV :"
@@ -219,14 +221,14 @@ defmodule  ServicioAlmacenamientoTest do
         IO.puts "UNo"
         Enum.each(restoNodos, fn ({ _ , nodo}) -> NodoRemoto.stop(nodo) end)
         IO.puts "DOS"
-        # Eliminar epmd en cada maquina con nodos Elixir                            
+        # Eliminar epmd en cada maquina con nodos Elixir
         Enum.each(maquinas, fn(m) -> NodoRemoto.killEpmd(m) end)
     end
-    
+
     defp comprobar(nodo_cliente, clave, valor_a_comprobar) do
         valor_en_almacen = ClienteSA.lee(nodo_cliente, clave)
 
-        assert valor_en_almacen == valor_a_comprobar       
+        assert valor_en_almacen == valor_a_comprobar
     end
 
 
@@ -267,4 +269,3 @@ defmodule  ServicioAlmacenamientoTest do
         bucle_infinito(nodo_cliente, aleat)
     end
 end
-

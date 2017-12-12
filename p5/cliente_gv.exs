@@ -1,9 +1,9 @@
 Code.require_file("#{__DIR__}/servidor_gv.exs")
 
 defmodule ClienteGV do
-    
+
     @tiempo_espera_de_respuesta 50
-    
+
 
     @doc """
         Solicitar al cliente que envie un ping al servidor de vistas
@@ -11,7 +11,6 @@ defmodule ClienteGV do
     @spec latido(node, integer) :: ServidorGV.t_vista
     def latido(nodo_servidor_gv, num_vista) do
         send({:servidor_gv, nodo_servidor_gv}, {:latido, num_vista, Node.self()})
-
         receive do   # esperar respuesta del ping
             {:vista_tentativa, vista, encontrado?} ->
                 {:vista_tentativa, vista, encontrado?}
@@ -29,7 +28,7 @@ defmodule ClienteGV do
     def obten_vista(nodo_servidor_gv) do
        send({:servidor_gv, nodo_servidor_gv}, {:obten_vista, self()})
 
-        receive do   # esperar respuesta del ping0
+        receive do   # esperar respuesta del ping
             {:vista_valida, vista, is_ok?} -> {vista, is_ok?}
 
         after @tiempo_espera_de_respuesta  ->
@@ -47,8 +46,8 @@ defmodule ClienteGV do
 
         case resultado do
             {vista, true} ->  vista.primario
-            
+
             {_vista, false} -> :undefined
-        end        
+        end
     end
 end
