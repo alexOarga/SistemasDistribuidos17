@@ -60,6 +60,8 @@ defmodule  ServicioAlmacenamientoTest do
 
         IO.puts("Test: Comprobar escritura con primario, copia y espera ...")
 
+        vistaprueba = ClienteGV.obten_vista(mapa_nodos.gv)
+        IO.inspect vistaprueba
         # Comprobar primeros nodos primario y copia
         {%{primario: p, copia: c}, _ok} = ClienteGV.obten_vista(mapa_nodos.gv)
         assert p == mapa_nodos.sa1

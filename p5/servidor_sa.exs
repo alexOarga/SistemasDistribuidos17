@@ -5,7 +5,6 @@ defmodule ServidorSA do
     # estado del servidor
     defstruct   num_vista: 0, 	#El numero de vista del servidor
 				        datos: %{}, 	#Los datos almacenados
-				        mutex: false,	#Acceso en ex. mutua de la escritura
 				        primario: :undefined,	# nodo primario de la vista
 				        copia: :undefined,		# nodo copia de la vista
                 esValida: false #Para saber si dar el servicio o no
@@ -52,12 +51,12 @@ defmodule ServidorSA do
         # Process.register(self(), :cliente_gv)
         spawn(__MODULE__, :init_monitor, [self()]) #Crear proceso de latidos
         spawn(__MODULE__, :init_lectores, [0]) #Concurrencia lectura
+        spawn(__MODULE__, :init_mutex, []) #Concurrencia lectura
 
 
     #------------- VUESTRO CODIGO DE INICIALIZACION AQUI..........
     atributos = %ServidorSA{num_vista: 0, 	#El numero de vista del servidor
 				                    datos: %{}, 	#Los datos almacenados
-				                    mutex: false,	#Acceso en ex. mutua de la escritura
 				                    primario: :undefined,	# nodo primario de la vista
 				                    copia: :undefined,		# nodo copia de la vista
                             esValida: false} #Para saber si dar el servicio o no
@@ -83,6 +82,34 @@ defmodule ServidorSA do
           {:write, :resta, pid_c} -> num_lectores - 1#peticion escritura - 1
         end
         init_lectores(numero)
+    end
+
+    def init_mutex() do
+      Process.register(self(), :servicio_mutex) #Me registro
+      servicio_mutex(1, [])
+    end
+
+    #Patron mutex, el counter representa la cuenta de los que llevan el mutex y q
+    #es la lista de espera a que reciban el mutex
+    def servicio_mutex(counter, q) do
+      {n_coun, n_q} = receive do
+        {:wait, pid_c} -> if(counter == 0) do #Si el mutex esta siendo usado
+                              q = q ++ [pid_c]
+                          else #Si no, se envia el mutex
+                            send(pid_c, :ok)
+                            counter = counter - 1
+                          end
+                          {counter, q}
+        {_, pid_c} -> counter = counter + 1
+                      if(q != []) do
+                        send(hd(q), :ok)
+                        counter = counter - 1
+                        q = tl(q)
+                      end
+                      {counter,q}
+
+      end
+      servicio_mutex(n_coun, n_q)
     end
 
 
@@ -113,7 +140,13 @@ defmodule ServidorSA do
                                                                copia: vista_recibida.copia} #Actualiza vista completa
                                     if(vista_recibida.primario == Node.self()) do #SI soy el primario, confirmo vista
                                               #COPIAR LOS DATOS A LA COPIA!
-                                              IO.puts("Copia de datos de primario a copia!")
+                                              IO.puts("PIDO EL MUTEX PARA COPIAR")
+                                              send({:servicio_mutex,Node.self()},{:wait, self()})
+                                              receive do
+                                                :ok -> IO.puts("Copia de datos de primario a copia y tengo el MUTEX!!")
+                                              end
+                                              send({:servicio_mutex,Node.self()},{:signal, self()})
+                                              IO.puts("DEVUELTO EL MUTEX")
                                     end
                                   end
                                   ClienteGV.latido(nodo_servidor_gv, atributos.num_vista)
