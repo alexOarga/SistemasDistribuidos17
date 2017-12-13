@@ -99,27 +99,28 @@ defmodule ServidorSA do
 
                   # --------------- OTROS MENSAJES QUE NECESITEIS
                   :envia_latido -> {:vista_tentativa, vista_recibida, validado} = ClienteGV.latido(nodo_servidor_gv, atributos.num_vista)
-                                     #{vista_inicial, false} -> IO.puts("SE HA CAIDO EL SERVIDOR")
-                                     #{:vista_tentativa, vista_recibida, validado} ->
-                                        if(validado == true) do ##Es una vista validada
-                                          atributos = %{ atributos | num_vista: vista_recibida.num_vista} #Actualiza el numero de vista
-                                          ClienteGV.latido(nodo_servidor_gv, atributos.num_vista) #Se envia latido
-                                        else #Es una vista no validada
-                                          if(vista_recibida.num_vista == 1) do #CASO INICIAL
-                                            ClienteGV.latido(nodo_servidor_gv, -1)
-                                          else
-                                            if(vista_recibida.num_vista != atributos.num_vista) do #los numeros de vista no coinciden
-                                            atributos = %{ atributos | num_vista: vista_recibida.num_vista,
-                                                                       primario: vista_recibida.primario,
-                                                                       copia: vista_recibida.copia} #Actualiza vista completa
-                                            if(vista_recibida.primario == self()) do #SI soy el primario, confirmo vista
+                              if(validado == true) do ##Es una vista validada
+                                atributos = %{ atributos | num_vista: vista_recibida.num_vista} #Actualiza el numero de vista
+                                ClienteGV.latido(nodo_servidor_gv, atributos.num_vista) #Se envia latido
+                              else #Es una vista no validada
+                                if(vista_recibida.num_vista == 1 && vista_recibida.primario == Node.self()) do #CASO INICIAL
+                                  atributos = %{atributos| num_vista: atributos.num_vista + 1}
+                                  ClienteGV.latido(nodo_servidor_gv, -1)
+                                else
+                                  if(vista_recibida.num_vista != atributos.num_vista) do #los numeros de vista no coinciden
+                                    atributos = %{ atributos | num_vista: vista_recibida.num_vista,
+                                                               primario: vista_recibida.primario,
+                                                               copia: vista_recibida.copia} #Actualiza vista completa
+                                    if(vista_recibida.primario == Node.self()) do #SI soy el primario, confirmo vista
                                               #COPIAR LOS DATOS A LA COPIA!
-                                            end
-                                          end
-                                          ClienteGV.latido(nodo_servidor_gv, atributos.num_vista)
-                                        end
-                                      end
-                                    atributos
+                                              IO.puts("Copia de datos de primario a copia!")
+                                    end
+                                  end
+                                  ClienteGV.latido(nodo_servidor_gv, atributos.num_vista)
+                                end
+                              end
+
+                              atributos
 
                end ##END-RECEIVE
 

@@ -25,7 +25,7 @@ defmodule  ServicioAlmacenamientoTest do
     #setup_all do
 
 
-    #@tag :deshabilitado
+    @tag :deshabilitado
     test "Test 1: solo_arranque y parada" do
         IO.puts("Test: Solo arranque y parada ...")
 
@@ -43,7 +43,7 @@ defmodule  ServicioAlmacenamientoTest do
         IO.puts(" ... Superado")
     end
 
-    @tag :deshabilitado
+    #@tag :deshabilitado
     test "Test 2: Algunas escrituras" do
         #:io.format "Pids de nodo MAESTRO ~p: principal = ~p~n", [node, self]
 
