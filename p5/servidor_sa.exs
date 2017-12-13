@@ -118,7 +118,80 @@ defmodule ServidorSA do
 
                     # Solicitudes de lectura y escritura
                     # de clientes del servicio alm.
-                  {op, param, nodo_origen}  -> atributos
+                  {:lee, clave, nodo_origen}  -> #Lectura de la base de datos
+                      if(atributos.primario == Node.self()) do
+                        send({:servicio_mutex,Node.self()},{:wait, self()}) #Pido el mutex
+                        receive do
+                          :ok -> IO.puts("Puedo leer")
+                        end
+                        send({:servicio_mutex,Node.self()},{:signal, self()}) #Devuelvo el mutex
+                        valor = Map.get(atributos.datos, String.to_atom(clave))#Obtengo el valor
+                        if(valor != nil) do #Tiene valor asociado
+                          send({:cliente_sa, nodo_origen},{:resultado, valor})
+                        else
+                          send({:cliente_sa, nodo_origen},{:resultado, ""})
+                        end
+                      else #No soy el primario
+                        send({:cliente_sa, nodo_origen},{:resultado, :no_soy_primario_valido})
+                      end
+
+
+                      atributos
+
+                  {:escribe_generico, {clave, nuevo_valor, es_hash}, nodo_origen}  -> #Escritura de la base de datos
+                      if(atributos.primario == Node.self()) do ##Solo escribo si soy nodo primario
+                        #Pido el mutex
+                        send({:servicio_mutex,Node.self()},{:wait, self()})
+                        receive do
+                          :ok -> IO.puts("PUEDO ESCRIBIR!")
+                        end
+                        #Pido el valor asociado, para saber si existe o no
+                        valorAsociado = Map.get(atributos.datos, String.to_atom(clave))
+                        if(valorAsociado != nil) do #Tiene un valor asociado
+                          if(es_hash == false) do
+                            datos_actualizados = Map.update(atributos.datos, String.to_atom(clave),
+                                                            valorAsociado, fn valorAsociado ->{valorAsociado, nuevo_valor} end)
+                            atributos = %{atributos|datos: datos_actualizados}
+                            #Copio los datos a la copia
+                            copiar_datos(atributos.copia, atributos.datos)
+                            #Envio el resultado
+                            send({:cliente_sa, nodo_origen},{:resultado, nuevo_valor})
+                          else ##Es escritura hash y ademas, tiene un valor asociado
+                            datos_actualizados = Map.update(atributos.datos, String.to_atom(clave),
+                                                            valorAsociado, fn valorAsociado ->{valorAsociado, hash(valorAsociado <> nuevo_valor)} end)
+                            atributos = %{atributos|datos: datos_actualizados}
+                            #Copio los datos a la copia
+                            copiar_datos(atributos.copia, atributos.datos)
+                            #Envio el resultado
+                            send({:cliente_sa, nodo_origen},{:resultado, valorAsociado})
+                          end
+                        else #No tiene un valor asociado
+                          if(es_hash == false) do
+                            nuevos_datos = Map.merge(atributos.datos, Map.new([{String.to_atom(clave), nuevo_valor}]))
+                            atributos = %{atributos|datos: nuevos_datos}
+                            ##Copio los datos a la copia
+                            copiar_datos(atributos.copia, atributos.datos)
+                            #Envio el resultado
+                            send({:cliente_sa, nodo_origen},{:resultado, nuevo_valor})
+                          else ##Es escritura hash y ademas, NO tiene un valor asociado
+                            nuevos_datos = Map.merge(atributos.datos, Map.new([{String.to_atom(clave), hash("" <> nuevo_valor)}]))
+                            atributos = %{atributos|datos: nuevos_datos}
+                            ##Copio los datos a la copia
+                            copiar_datos(atributos.copia, atributos.datos)
+                            #Envio el resultado
+                            send({:cliente_sa, nodo_origen},{:resultado, ""})
+                          end
+                        end
+                        send({:servicio_mutex,Node.self()},{:signal, self()}) #Devuelvo el mutex
+                      else
+                          send({:cliente_sa, nodo_origen},{:resultado, :no_soy_primario_valido})
+                      end
+                      atributos
+
+
+                  {:copia_datos, nuevos_datos} -> ##Llega si soy nodo copia, y es para copiar los datos que me envian
+                      atributos = %{atributos|datos: nuevos_datos}
+                      atributos
 
 
                         # ----------------- vuestro código
@@ -140,13 +213,12 @@ defmodule ServidorSA do
                                                                copia: vista_recibida.copia} #Actualiza vista completa
                                     if(vista_recibida.primario == Node.self()) do #SI soy el primario, confirmo vista
                                               #COPIAR LOS DATOS A LA COPIA!
-                                              IO.puts("PIDO EL MUTEX PARA COPIAR")
                                               send({:servicio_mutex,Node.self()},{:wait, self()})
                                               receive do
-                                                :ok -> IO.puts("Copia de datos de primario a copia y tengo el MUTEX!!")
+                                                :ok -> copiar_datos(atributos.copia, atributos.datos)
+                                                       IO.puts("COPIA HECHA: SERVICIO OK!")
                                               end
                                               send({:servicio_mutex,Node.self()},{:signal, self()})
-                                              IO.puts("DEVUELTO EL MUTEX")
                                     end
                                   end
                                   ClienteGV.latido(nodo_servidor_gv, atributos.num_vista)
@@ -162,20 +234,11 @@ defmodule ServidorSA do
 
     #--------- Otras funciones privadas que necesiteis .......
 
-    #Devuelve si y solo si el nodo coincide con el primario de la vista
-    def soy_primario(vista) do
-      if (Node.self() == vista.primario) do
-        :true
-      else
-        :false
-      end
-    end
 
     #Envia los datos almacenados al nodo copia
-    def copiar_datos(nodo_copia) do
+    def copiar_datos(nodo_copia, datos) do
       if(nodo_copia != :undefined) do
-        #Enviar datos a nodo copia, pero como sabes la direccion de nodo copia??????????????????????????????
-        #Ademas, nodo copia tiene que tener un receive para recibir datos???????????????????????????????????
+        send({:servidor_sa, nodo_copia},{:copia_datos, datos})
       end
     end
 end
