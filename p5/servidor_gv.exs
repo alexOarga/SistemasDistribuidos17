@@ -158,7 +158,9 @@ defmodule ServidorGV do
                           t_vista = %{t_vista | copia: :undefined} ##Sin copia
                           ##System.halt()
                         else
+                          IO.puts("Detecto caida de copia")
                           t_vista = %{t_vista | copia: elem(Enum.at(listaLatidos,2),0)} ##Promociona espera a copia
+                          t_vista = %{t_vista | num_vista: v_vista.num_vista + 1} ##Se aumenta
                           listaLatidos = List.delete_at(listaLatidos, 1) ##Se elimina de la lista la copia anterior
                         end
                       end

@@ -122,7 +122,7 @@ defmodule ServidorSA do
                       if(atributos.primario == Node.self()) do
                         send({:servicio_mutex,Node.self()},{:wait, self()}) #Pido el mutex
                         receive do
-                          :ok -> IO.puts("Puedo leer")
+                          :ok -> IO.puts("")
                         end
                         send({:servicio_mutex,Node.self()},{:signal, self()}) #Devuelvo el mutex
                         valor = Map.get(atributos.datos, String.to_atom(clave))#Obtengo el valor
@@ -143,27 +143,28 @@ defmodule ServidorSA do
                         #Pido el mutex
                         send({:servicio_mutex,Node.self()},{:wait, self()})
                         receive do
-                          :ok -> IO.puts("PUEDO ESCRIBIR!")
+                          :ok -> IO.puts("->ACCESO A ESCRITURA")
                         end
                         #Pido el valor asociado, para saber si existe o no
                         valorAsociado = Map.get(atributos.datos, String.to_atom(clave))
                         if(valorAsociado != nil) do #Tiene un valor asociado
                           if(es_hash == false) do
                             datos_actualizados = Map.update(atributos.datos, String.to_atom(clave),
-                                                            valorAsociado, fn valorAsociado ->{valorAsociado, nuevo_valor} end)
+                                                            valorAsociado, fn valorAsociado -> nuevo_valor end)
                             atributos = %{atributos|datos: datos_actualizados}
                             #Copio los datos a la copia
                             copiar_datos(atributos.copia, atributos.datos)
                             #Envio el resultado
                             send({:cliente_sa, nodo_origen},{:resultado, nuevo_valor})
                           else ##Es escritura hash y ademas, tiene un valor asociado
+                            val_aux = valorAsociado ##Esto es para enviar el antiguo valor, el hash si no, lo modifica
                             datos_actualizados = Map.update(atributos.datos, String.to_atom(clave),
-                                                            valorAsociado, fn valorAsociado ->{valorAsociado, hash(valorAsociado <> nuevo_valor)} end)
+                                                            valorAsociado, fn valorAsociado ->hash(valorAsociado <> nuevo_valor) end)
                             atributos = %{atributos|datos: datos_actualizados}
                             #Copio los datos a la copia
                             copiar_datos(atributos.copia, atributos.datos)
                             #Envio el resultado
-                            send({:cliente_sa, nodo_origen},{:resultado, valorAsociado})
+                            send({:cliente_sa, nodo_origen},{:resultado, val_aux})
                           end
                         else #No tiene un valor asociado
                           if(es_hash == false) do

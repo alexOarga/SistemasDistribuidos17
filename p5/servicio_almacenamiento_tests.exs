@@ -99,7 +99,7 @@ defmodule  ServicioAlmacenamientoTest do
         stopServidores(mapa_nodos, @maquinas)
     end
 
-    @tag :deshabilitado
+    #@tag :deshabilitado
     test "Test 3 : Mismos valores concurrentes" do
         IO.puts("Test: Escrituras mismos valores clientes concurrentes ...")
 
