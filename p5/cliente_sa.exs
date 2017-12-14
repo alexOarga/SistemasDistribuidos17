@@ -76,8 +76,14 @@ defmodule ClienteSA do
 
                 Process.sleep 100
 
-                exit("ERROR: funcion escribe_generico en modulo CLienteSA")
+                #exit("ERROR: funcion escribe_generico en modulo CLienteSA")
         end       
+    end
+
+	@spec escribe_sin_receive( node(), String.t, String.t, boolean ) :: String.t
+    def escribe_sin_receive(nodo_cliente, clave, nuevo_valor, con_hash) do
+        send({:cliente_sa, nodo_cliente}, {:escribe_generico, 
+                                        {clave, nuevo_valor, con_hash}, self()})   
     end
      
 

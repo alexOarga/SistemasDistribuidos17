@@ -50,4 +50,19 @@ defmodule ClienteGV do
             {_vista, false} -> :undefined
         end
     end
+
+	@doc """
+        Solicitar al cliente que consiga el primario del servicio de vistas
+    """
+    @spec copia(node) :: node
+    def copia(nodo_servidor_gv) do
+        resultado = obten_vista(nodo_servidor_gv)
+
+        case resultado do
+            {vista, true} ->  vista.copia
+
+            {_vista, false} -> :undefined
+        end
+    end
+
 end

@@ -224,7 +224,49 @@ defmodule  ServicioAlmacenamientoTest do
 
     # Test 5 : Petición de escritura inmediatamente después de la caída de nodo
     #         copia (con uno en espera que le reemplace).
+	#@tag deshabilitado
+	test "Test 5 : Peticion escritura inmediatamente despues de caidade copia" do
+          IO.puts("Test: Peticion escritura inmediatamente despues de caida de copia")
 
+          # Para que funcione bien la función  ClienteGV.obten_vista
+          Process.register(self(), :servidor_sa)
+
+          # Arrancar nodos : 1 GV, 3 servidores y 3 cliente de almacenamiento
+          mapa_nodos = startServidores(["ca1", "ca2", "ca3"],
+                                       ["sa1", "sa2", "sa3",],
+                                       @maquinas)
+
+          # Espera configuracion y relacion entre nodos
+          Process.sleep(200)
+
+          # Comprobar primeros nodos primario y copia
+          {%{primario: p, copia: c}, _ok} = ClienteGV.obten_vista(mapa_nodos.gv)
+          assert p == mapa_nodos.sa1
+          assert c == mapa_nodos.sa2
+
+          #Escritura pre-caida
+          ClienteSA.escribe(mapa_nodos.ca1, "a", "aa")
+
+          #TIramos el nodo copia
+          NodoRemoto.stop(ClienteGV.copia(mapa_nodos.gv))
+          IO.inspect Node.ping(mapa_nodos.sa2)
+
+          #Esperamos que el gestor de vistas detecte que se ha caido
+          Process.sleep(700)
+
+          IO.puts("YA SE HA CAIDO, VAMOS A ESCRIBIR")
+		  pararPromocion(mapa_nodos.gv, self(), 200)
+          #Intentamos escritura post-caida inmediata
+          ClienteSA.escribe(mapa_nodos.ca1, "b", "bb")
+		  reanudarPromocion(mapa_nodos.gv, self())
+          #Leemos
+          #comprobar(mapa_nodos.ca1, "a", "aa")
+
+          # Parar todos los nodos y epmds
+          stopServidores(mapa_nodos, @maquinas)
+
+           IO.puts(" ... Superado")
+		end
 
     # Test 6 : Petición de escritura duplicada por perdida de respuesta
     #         (modificación realizada en BD), con primario y copia.
@@ -232,7 +274,42 @@ defmodule  ServicioAlmacenamientoTest do
 
     # Test 7 : Comprobación de que un antiguo primario no debería servir
     #         operaciones de lectura.
+	test "Test 7 : " do
 
+		      # Para que funcione bien la función  ClienteGV.obten_vista
+		      Process.register(self(), :servidor_sa)
+
+		      # Arrancar nodos : 1 GV, 3 servidores y 3 cliente de almacenamiento
+		      mapa_nodos = startServidores(["ca1", "ca2", "ca3"],
+		                                   ["sa1", "sa2", "sa3",],
+		                                   @maquinas)
+
+		      # Espera configuracion y relacion entre nodos
+		      Process.sleep(200)
+
+		      # Comprobar primeros nodos primario y copia
+		      {%{primario: p, copia: c}, _ok} = ClienteGV.obten_vista(mapa_nodos.gv)
+		      assert p == mapa_nodos.sa1
+		      assert c == mapa_nodos.sa2
+
+		      #Escritura pre-caida
+		      ClienteSA.escribe(mapa_nodos.ca1, "a", "aa")
+
+			  #Tiramos el nodo primario
+			  antiguo_primario = ClienteGV.primario(mapa_nodos.gv)
+              NodoRemoto.stop(antiguo_primario)
+              
+			  #Esperamos que el gestor de vistas detecte que se ha caido
+          	  Process.sleep(700)
+
+			  # Escribe en nodo caido
+			  IO.puts("ANTES DE ESCRIBIR CAIDO")
+			  ClienteSA.escribe_sin_receive(antiguo_primario, "a", "bb", false)
+			  IO.puts("despues DE ESCRIBIR EN CAIDO COMPROBAMOS")
+
+			  # comprobamos que no se ha modificado
+			  comprobar(mapa_nodos.ca1, "a", "aa")
+	end
 
     # Test 8 : Escrituras concurrentes de varios clientes sobre la misma clave,
     #         con comunicación con fallos (sobre todo pérdida de repuestas para
@@ -244,6 +321,17 @@ defmodule  ServicioAlmacenamientoTest do
 
 
     # ------------------ FUNCIONES DE APOYO A TESTS ------------------------
+
+    defp pararPromocion(nodo_servidor_gv, servidor_sa, time) do
+	  send({:servidor_gv, nodo_servidor_gv}, {:depuracion, :pausa_promocion})
+	  send(servidor_sa, {:depuracion, :pausa_promocion})
+	  Process.sleep(time)
+	end
+
+    defp reanudarPromocion(nodo_servidor_gv, servidor_sa) do
+	  send(servidor_sa, {:depuracion, :continuar_promocion})
+	  send({:servidor_gv, nodo_servidor_gv}, {:depuracion, :continua_promocion})
+	end
 
     defp startServidores(clientes, serv_alm, maquinas) do
         tiempo_antes = :os.system_time(:milli_seconds)
@@ -294,7 +382,6 @@ defmodule  ServicioAlmacenamientoTest do
 
     defp comprobar(nodo_cliente, clave, valor_a_comprobar) do
         valor_en_almacen = ClienteSA.lee(nodo_cliente, clave)
-
         assert valor_en_almacen == valor_a_comprobar
     end
 

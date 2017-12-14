@@ -124,62 +124,68 @@ defmodule ServidorSA do
                         receive do
                           :ok -> IO.puts("")
                         end
-                        send({:servicio_mutex,Node.self()},{:signal, self()}) #Devuelvo el mutex
-                        valor = Map.get(atributos.datos, String.to_atom(clave))#Obtengo el valor
-                        if(valor != nil) do #Tiene valor asociado
+						# Devuelvo el mutex
+                        send({:servicio_mutex,Node.self()},{:signal, self()}) 	
+						# Obtengo el valor					
+                        valor = Map.get(atributos.datos, String.to_atom(clave))						
+                        if(valor != nil) do 
+						  # Tiene valor asociado
                           send({:cliente_sa, nodo_origen},{:resultado, valor})
                         else
                           send({:cliente_sa, nodo_origen},{:resultado, ""})
                         end
-                      else #No soy el primario
+                      else 
+					  # No soy el primario
                         send({:cliente_sa, nodo_origen},{:resultado, :no_soy_primario_valido})
                       end
 
 
                       atributos
 
-                  {:escribe_generico, {clave, nuevo_valor, es_hash}, nodo_origen}  -> #Escritura de la base de datos
-                      if(atributos.primario == Node.self()) do ##Solo escribo si soy nodo primario
-                        #Pido el mutex
+                  {:escribe_generico, {clave, nuevo_valor, es_hash}, nodo_origen}  -> # Escritura de la base de datos
+                      if(atributos.primario == Node.self()) do # Solo escribo si soy nodo primario
+                        # Pido el mutex
                         send({:servicio_mutex,Node.self()},{:wait, self()})
                         receive do
                           :ok -> IO.puts("->ACCESO A ESCRITURA")
                         end
-                        #Pido el valor asociado, para saber si existe o no
+                        # Pido el valor asociado, para saber si existe o no
                         valorAsociado = Map.get(atributos.datos, String.to_atom(clave))
-                        if(valorAsociado != nil) do #Tiene un valor asociado
+                        if(valorAsociado != nil) do # Tiene un valor asociado
                           if(es_hash == false) do
                             datos_actualizados = Map.update(atributos.datos, String.to_atom(clave),
                                                             valorAsociado, fn valorAsociado -> nuevo_valor end)
                             atributos = %{atributos|datos: datos_actualizados}
-                            #Copio los datos a la copia
+                            # Copio los datos a la copia
                             copiar_datos(atributos.copia, atributos.datos)
-                            #Envio el resultado
+                            # Envio el resultado
                             send({:cliente_sa, nodo_origen},{:resultado, nuevo_valor})
                           else ##Es escritura hash y ademas, tiene un valor asociado
-                            val_aux = valorAsociado ##Esto es para enviar el antiguo valor, el hash si no, lo modifica
+                            val_aux = valorAsociado 
+							# Esto es para enviar el antiguo valor, el hash si no, lo modifica
                             datos_actualizados = Map.update(atributos.datos, String.to_atom(clave),
                                                             valorAsociado, fn valorAsociado ->hash(valorAsociado <> nuevo_valor) end)
                             atributos = %{atributos|datos: datos_actualizados}
-                            #Copio los datos a la copia
+                            # Copio los datos a la copia
                             copiar_datos(atributos.copia, atributos.datos)
-                            #Envio el resultado
+                            # Envio el resultado
                             send({:cliente_sa, nodo_origen},{:resultado, val_aux})
                           end
-                        else #No tiene un valor asociado
+                        else # No tiene un valor asociado
                           if(es_hash == false) do
                             nuevos_datos = Map.merge(atributos.datos, Map.new([{String.to_atom(clave), nuevo_valor}]))
                             atributos = %{atributos|datos: nuevos_datos}
-                            ##Copio los datos a la copia
+                            # Copio los datos a la copia
                             copiar_datos(atributos.copia, atributos.datos)
-                            #Envio el resultado
+                            # Envio el resultado
                             send({:cliente_sa, nodo_origen},{:resultado, nuevo_valor})
-                          else ##Es escritura hash y ademas, NO tiene un valor asociado
+                          else 
+							# Es escritura hash y ademas, NO tiene un valor asociado
                             nuevos_datos = Map.merge(atributos.datos, Map.new([{String.to_atom(clave), hash("" <> nuevo_valor)}]))
                             atributos = %{atributos|datos: nuevos_datos}
-                            ##Copio los datos a la copia
+                            # Copio los datos a la copia
                             copiar_datos(atributos.copia, atributos.datos)
-                            #Envio el resultado
+                            # Envio el resultado
                             send({:cliente_sa, nodo_origen},{:resultado, ""})
                           end
                         end
@@ -200,7 +206,8 @@ defmodule ServidorSA do
 
                   # --------------- OTROS MENSAJES QUE NECESITEIS
                   :envia_latido -> {:vista_tentativa, vista_recibida, validado} = ClienteGV.latido(nodo_servidor_gv, atributos.num_vista)
-                              if(validado == true) do ##Es una vista validada
+                              if(validado == true) do 
+								# Es una vista validada
                                 atributos = %{ atributos | num_vista: vista_recibida.num_vista} #Actualiza el numero de vista
                                 ClienteGV.latido(nodo_servidor_gv, atributos.num_vista) #Se envia latido
                               else #Es una vista no validada
@@ -227,6 +234,10 @@ defmodule ServidorSA do
                               end
 
                               atributos
+					{:depuracion, :pausa_promocion} -> IO.puts("SA PARADO")
+					  receive do
+					    {:depuracion, :continua_promocion} -> atributos
+					end
 
                end ##END-RECEIVE
 

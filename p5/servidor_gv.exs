@@ -81,6 +81,10 @@ defmodule ServidorGV do
 
     defp bucle_recepcion(t_vista, v_vista, listaLatidos) do
         {t_vista,v_vista,listaLatidos} = receive do
+				{:depuracion, :pausa_promocion} -> IO.puts("GV PARADO")
+					receive do
+					  {:depuracion, :continua_promocion} -> {t_vista,v_vista,listaLatidos}
+					end
                 {:latido, 0, nodo_emisor} ->
                     if (t_vista.num_vista == 0) do ##Caso inicial, ningun nodo, nueva vista
                       t_vista = %{t_vista | num_vista: t_vista.num_vista + 1}##Suma numero vista + 1
